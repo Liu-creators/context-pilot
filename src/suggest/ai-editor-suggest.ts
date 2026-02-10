@@ -7,7 +7,7 @@
  * **验证需求：2.1, 2.3, 2.4, 2.5, 2.7**
  */
 
-import { App, Editor, EditorPosition, EditorSuggest, TFile } from 'obsidian';
+import { App, Editor, EditorPosition, EditorSuggest, TFile, Scope } from 'obsidian';
 import { AISuggestion } from '../types';
 import { EditorUIController } from '../ui/editor-ui-controller';
 import type MyPlugin from '../main';
@@ -44,11 +44,96 @@ interface EditorSuggestTriggerInfo {
 export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 	private plugin: MyPlugin;
 	private editorUIController: EditorUIController;
+	private shiftPressed: boolean = false;
 	
 	constructor(app: App, plugin: MyPlugin, editorUIController: EditorUIController) {
 		super(app);
 		this.plugin = plugin;
 		this.editorUIController = editorUIController;
+	}
+	
+	/**
+	 * 重写 open 方法以添加自定义键盘处理
+	 */
+	open(): void {
+		super.open();
+		
+		// 获取建议框的 scope
+		const scope = (this as any).scope as Scope;
+		if (scope) {
+			// 为每个配置的快捷键注册处理器
+			for (const shortcut of this.plugin.settings.contextShortcuts) {
+				// 跳过无修饰符的 Enter（这是默认行为）
+				if (shortcut.modifiers.length === 0 && shortcut.key === 'Enter') {
+					continue;
+				}
+				
+				// 注册快捷键
+				scope.register(shortcut.modifiers as any, shortcut.key, (evt: KeyboardEvent) => {
+					evt.preventDefault();
+					evt.stopPropagation();
+					
+					// 获取当前上下文和建议
+					if (this.context) {
+						const suggestions = this.getSuggestions(this.context);
+						if (suggestions && suggestions.length > 0) {
+							const suggestion = suggestions[0];
+							if (suggestion) {
+								// 手动触发选择，并传递事件和上下文类型
+								this.selectSuggestionWithContext(suggestion, evt, shortcut.contextType);
+								this.close();
+							}
+						}
+					}
+					
+					return false;
+				});
+			}
+		}
+	}
+	
+	/**
+	 * 带上下文类型的选择建议
+	 * 
+	 * @param suggestion 建议项
+	 * @param evt 键盘事件
+	 * @param contextType 上下文类型
+	 */
+	private selectSuggestionWithContext(
+		suggestion: AISuggestion,
+		evt: KeyboardEvent,
+		contextType: 'none' | 'before-cursor' | 'settings'
+	): void {
+		const context = this.context;
+		if (!context) {
+			return;
+		}
+		
+		const editor = context.editor;
+		const prompt = suggestion.prompt;
+		
+		if (!prompt || prompt.trim().length === 0) {
+			return;
+		}
+		
+		// 删除触发文本
+		editor.replaceRange('', context.start, context.end);
+		
+		// 根据上下文类型提交
+		const includeBeforeContext = contextType === 'before-cursor';
+		const useSettings = contextType === 'settings';
+		
+		this.editorUIController.submitPrompt(
+			editor,
+			prompt,
+			context.start,
+			includeBeforeContext,
+			useSettings
+		);
+		
+		if (this.plugin.settings.debugMode) {
+			console.log('[AI Editor Suggest] 提交 prompt:', prompt, '上下文类型:', contextType);
+		}
 	}
 	
 	/**
@@ -168,15 +253,76 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 		});
 		text.setText(suggestion.displayText);
 		
-		// 如果没有输入，显示提示
-		if (!suggestion.prompt) {
-			const hint = textContainer.createSpan({ cls: 'ai-suggestion-hint' });
-			hint.setText('按 Enter 提交问题');
-		}
+		// 生成快捷键提示
+		const shortcutHints = this.generateShortcutHints();
+		
+		// 显示快捷键提示
+		const hint = textContainer.createSpan({ cls: 'ai-suggestion-hint' });
+		hint.setText(shortcutHints);
 		
 		// 添加快捷键提示
 		const hotkey = el.createSpan({ cls: 'ai-suggestion-hotkey' });
 		hotkey.setText('↵');
+	}
+	
+	/**
+	 * 生成快捷键提示文本
+	 * 
+	 * @returns 快捷键提示字符串
+	 */
+	private generateShortcutHints(): string {
+		const hints: string[] = [];
+		
+		for (const shortcut of this.plugin.settings.contextShortcuts) {
+			const keyCombo = this.formatShortcut(shortcut);
+			const contextName = this.getContextTypeName(shortcut.contextType);
+			hints.push(`${keyCombo}: ${contextName}`);
+		}
+		
+		return hints.join(' | ');
+	}
+	
+	/**
+	 * 格式化快捷键显示
+	 * 
+	 * @param shortcut 快捷键配置
+	 * @returns 格式化的快捷键字符串
+	 */
+	private formatShortcut(shortcut: any): string {
+		const parts = shortcut.modifiers.map((mod: string) => {
+			// 在 Mac 上将 Mod 显示为 Cmd，其他平台显示为 Ctrl
+			if (mod === 'Mod') {
+				return this.isMac() ? 'Cmd' : 'Ctrl';
+			}
+			return mod;
+		});
+		
+		if (shortcut.modifiers.length === 0) {
+			return shortcut.key;
+		}
+		return [...parts, shortcut.key].join('+');
+	}
+	
+	/**
+	 * 检测是否为 Mac 平台
+	 */
+	private isMac(): boolean {
+		return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+	}
+	
+	/**
+	 * 获取上下文类型的显示名称
+	 * 
+	 * @param contextType 上下文类型
+	 * @returns 显示名称
+	 */
+	private getContextTypeName(contextType: string): string {
+		const names: Record<string, string> = {
+			'none': '无上下文',
+			'before-cursor': '包含上文',
+			'settings': '遵循设置'
+		};
+		return names[contextType] || contextType;
 	}
 	
 	/**
@@ -205,6 +351,11 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 			return;
 		}
 		
+		// 查找匹配的快捷键配置（默认 Enter）
+		const defaultShortcut = this.plugin.settings.contextShortcuts.find(
+			s => s.modifiers.length === 0 && s.key === 'Enter'
+		);
+		
 		// 删除触发文本（包括 `/`）
 		editor.replaceRange(
 			'',
@@ -212,13 +363,29 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 			context.end
 		);
 		
-		// 使用 EditorUIController 提交 prompt
-		// 注意：这是一个异步操作，但 selectSuggestion 是同步的
-		// 我们不等待结果，让 EditorUIController 处理所有异步逻辑
-		this.editorUIController.submitPrompt(editor, prompt, context.start);
-		
-		if (this.plugin.settings.debugMode) {
-			console.log('[AI Editor Suggest] 提交 prompt:', prompt);
+		// 根据默认快捷键配置提交
+		if (defaultShortcut) {
+			const includeBeforeContext = defaultShortcut.contextType === 'before-cursor';
+			const useSettings = defaultShortcut.contextType === 'settings';
+			
+			this.editorUIController.submitPrompt(
+				editor,
+				prompt,
+				context.start,
+				includeBeforeContext,
+				useSettings
+			);
+			
+			if (this.plugin.settings.debugMode) {
+				console.log('[AI Editor Suggest] 提交 prompt (Enter):', prompt, '上下文类型:', defaultShortcut.contextType);
+			}
+		} else {
+			// 如果没有配置默认快捷键，使用旧的行为（遵循设置）
+			this.editorUIController.submitPrompt(editor, prompt, context.start, false, true);
+			
+			if (this.plugin.settings.debugMode) {
+				console.log('[AI Editor Suggest] 提交 prompt (Enter - 默认):', prompt);
+			}
 		}
 	}
 }

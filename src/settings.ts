@@ -1,6 +1,21 @@
 import {App, Notice, PluginSettingTab, Setting} from "obsidian";
 import MyPlugin from "./main";
 import { ContextScope } from "./types/context";
+import { ShortcutCaptureModal } from "./ui/shortcut-capture-modal";
+
+/**
+ * 上下文快捷键配置接口
+ */
+export interface ContextShortcut {
+	/** 快捷键修饰符（如 'Shift', 'Ctrl', 'Alt', 'Mod'） */
+	modifiers: string[];
+	/** 快捷键（如 'Enter'） */
+	key: string;
+	/** 上下文范围类型 */
+	contextType: 'none' | 'before-cursor' | 'settings';
+	/** 显示名称 */
+	displayName: string;
+}
 
 /**
  * AI 插件设置接口
@@ -37,6 +52,9 @@ export interface AIPluginSettings {
 	
 	/** 最大上下文长度（字符数） */
 	maxContextLength: number;
+	
+	/** 上下文快捷键配置 */
+	contextShortcuts: ContextShortcut[];
 	
 	// ========== UI 配置 ==========
 	
@@ -90,6 +108,20 @@ export const DEFAULT_SETTINGS: AIPluginSettings = {
 	contextEnabled: false,
 	contextScope: 'paragraph',
 	maxContextLength: 2000,
+	contextShortcuts: [
+		{
+			modifiers: [],
+			key: 'Enter',
+			contextType: 'settings',
+			displayName: '遵循设置'
+		},
+		{
+			modifiers: ['Shift'],
+			key: 'Enter',
+			contextType: 'before-cursor',
+			displayName: '光标前全部内容'
+		}
+	],
 	
 	// UI 配置
 	defaultCollapsed: false,
@@ -312,6 +344,88 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					}));
 		}
 
+		// 上下文快捷键配置
+		containerEl.createEl('h3', { text: '上下文快捷键' });
+		containerEl.createEl('p', { 
+			text: '配置不同快捷键对应的上下文范围。在输入 / 后按下对应快捷键提交问题。',
+			cls: 'setting-item-description'
+		});
+
+		// 显示当前快捷键配置
+		this.plugin.settings.contextShortcuts.forEach((shortcut, index) => {
+			const shortcutSetting = new Setting(containerEl)
+				.setName(`快捷键 ${index + 1}`)
+				.setDesc(this.getShortcutDescription(shortcut));
+
+			// 显示快捷键组合（可点击编辑）
+			const shortcutText = this.formatShortcut(shortcut);
+			shortcutSetting.addButton(button => {
+				button
+					.setButtonText(shortcutText)
+					.setTooltip('点击修改快捷键')
+					.onClick(async () => {
+						// 打开快捷键捕获模态框
+						new ShortcutCaptureModal(this.app, async (captured) => {
+							if (captured) {
+								const shortcuts = this.plugin.settings.contextShortcuts;
+								if (shortcuts[index]) {
+									shortcuts[index].modifiers = captured.modifiers;
+									shortcuts[index].key = captured.key;
+									await this.plugin.saveSettings();
+									this.display();
+								}
+							}
+						}).open();
+					});
+			});
+
+			// 上下文类型选择
+			shortcutSetting.addDropdown(dropdown => dropdown
+				.addOption('none', '无上下文')
+				.addOption('before-cursor', '光标前全部内容')
+				.addOption('settings', '遵循设置')
+				.setValue(shortcut.contextType)
+				.onChange(async (value) => {
+					const shortcuts = this.plugin.settings.contextShortcuts;
+					if (shortcuts[index]) {
+						shortcuts[index].contextType = value as any;
+						await this.plugin.saveSettings();
+						this.display();
+					}
+				}));
+
+			// 删除按钮（至少保留一个快捷键）
+			if (this.plugin.settings.contextShortcuts.length > 1) {
+				shortcutSetting.addButton(button => button
+					.setButtonText('删除')
+					.setWarning()
+					.onClick(async () => {
+						this.plugin.settings.contextShortcuts.splice(index, 1);
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+			}
+		});
+
+		// 添加新快捷键按钮
+		new Setting(containerEl)
+			.setName('添加快捷键')
+			.setDesc('添加新的上下文快捷键配置')
+			.addButton(button => button
+				.setButtonText('添加')
+				.setCta()
+				.onClick(async () => {
+					// 添加一个新的快捷键配置
+					this.plugin.settings.contextShortcuts.push({
+						modifiers: ['Ctrl'],
+						key: 'Enter',
+						contextType: 'none',
+						displayName: '自定义快捷键'
+					});
+					await this.plugin.saveSettings();
+					this.display();
+				}));
+
 		// ========== UI 配置 ==========
 		containerEl.createEl('h2', { text: 'UI 配置' });
 
@@ -522,5 +636,45 @@ export class AIPluginSettingTab extends PluginSettingTab {
 		const b = parseInt(hex.substring(4, 6), 16);
 		
 		return `${r}, ${g}, ${b}`;
+	}
+	
+	/**
+	 * 格式化快捷键显示
+	 * 
+	 * @param shortcut 快捷键配置
+	 * @returns 格式化的快捷键字符串
+	 */
+	private formatShortcut(shortcut: ContextShortcut): string {
+		const parts = shortcut.modifiers.map(mod => {
+			// 在 Mac 上将 Mod 显示为 Cmd，其他平台显示为 Ctrl
+			if (mod === 'Mod') {
+				return this.isMac() ? 'Cmd' : 'Ctrl';
+			}
+			return mod;
+		});
+		parts.push(shortcut.key);
+		return parts.join('+');
+	}
+	
+	/**
+	 * 检测是否为 Mac 平台
+	 */
+	private isMac(): boolean {
+		return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+	}
+	
+	/**
+	 * 获取快捷键描述
+	 * 
+	 * @param shortcut 快捷键配置
+	 * @returns 描述文本
+	 */
+	private getShortcutDescription(shortcut: ContextShortcut): string {
+		const contextTypeNames: Record<string, string> = {
+			'none': '不包含上下文',
+			'before-cursor': '包含光标前的全部内容（含双链）',
+			'settings': '根据设置中的上下文范围'
+		};
+		return contextTypeNames[shortcut.contextType] || shortcut.displayName;
 	}
 }

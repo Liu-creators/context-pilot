@@ -76,11 +76,15 @@ export class EditorUIController {
 	 * @param editor 编辑器实例
 	 * @param prompt 用户输入的 prompt
 	 * @param position 插入位置
+	 * @param includeBeforeContext 是否包含光标位置之前的全部内容作为上下文
+	 * @param useSettings 是否使用设置中的上下文配置（当 includeBeforeContext 为 false 时有效）
 	 */
 	async submitPrompt(
 		editor: Editor,
 		prompt: string,
-		position: EditorPosition
+		position: EditorPosition,
+		includeBeforeContext: boolean = false,
+		useSettings: boolean = true
 	): Promise<void> {
 		// 验证 prompt
 		if (!prompt || prompt.trim().length === 0) {
@@ -109,9 +113,54 @@ export class EditorUIController {
 		// 创建取消令牌
 		const cancelToken = createCancelToken();
 		
-		// 提取上下文（如果启用）
+		// 提取上下文
 		let context: string | undefined;
-		if (this.plugin.settings.contextEnabled && this.contextExtractor) {
+		
+		// 如果用户按下 Shift+Enter（或配置为 before-cursor），提取光标位置之前的全部内容
+		if (includeBeforeContext) {
+			// 提取从文档开头到当前位置的所有内容
+			const beforeContent = editor.getRange(
+				{ line: 0, ch: 0 },
+				position
+			);
+			
+			if (this.plugin.settings.debugMode) {
+				console.log(`[Editor UI] 提取上文内容: ${beforeContent.length} 字符`);
+			}
+			
+			// 解析上下文中的双链并读取文件内容
+			const activeFile = this.plugin.app.workspace.getActiveFile();
+			const sourcePath = activeFile?.path || '';
+			const wikilinkResult = await this.wikilinkResolver.resolveAndBuildContext(
+				beforeContent,
+				sourcePath,
+				this.plugin.settings.maxContextLength
+			);
+			
+			// 合并上下文：原始内容 + 双链文件内容
+			const contexts: string[] = [];
+			if (beforeContent) {
+				contexts.push(`--- 当前文档上文 ---\n${beforeContent}`);
+			}
+			if (wikilinkResult.context) {
+				contexts.push(`--- 引用文件 ---\n${wikilinkResult.context}`);
+			}
+			context = contexts.length > 0 ? contexts.join('\n\n') : undefined;
+			
+			// 如果有未解析的链接，在调试模式下记录
+			if (wikilinkResult.unresolvedLinks.length > 0 && this.plugin.settings.debugMode) {
+				console.warn('[Editor UI] 上文中未解析的链接:', wikilinkResult.unresolvedLinks);
+			}
+			
+			if (this.plugin.settings.debugMode) {
+				console.log(`[Editor UI] 包含上文上下文: ${context?.length || 0} 字符`);
+				if (wikilinkResult.totalLinks > 0) {
+					console.log(`[Editor UI] 双链解析: ${wikilinkResult.resolvedLinks}/${wikilinkResult.totalLinks} 个链接已解析`);
+				}
+			}
+		} 
+		// 否则，根据 useSettings 参数决定是否使用设置中的上下文
+		else if (useSettings && this.plugin.settings.contextEnabled && this.contextExtractor) {
 			const extractedContext = this.contextExtractor.extract(editor, position);
 			context = extractedContext.content;
 			
