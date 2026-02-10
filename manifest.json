@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-ai-extensions",
-	"name": "AI Extensions",
+	"id": "obsidian-ai-companion",
+	"name": "AI Companion",
 	"version": "0.1.0",
 	"minAppVersion": "1.0.0",
-	"description": "为 Obsidian 提供 AI 辅助功能，支持在 Markdown 编辑器和 Canvas 画布中与 AI 交互，提升写作和思维整理效率",
+	"description": "你的 AI 写作伙伴。在 Markdown 编辑器和 Canvas 画布中提供智能辅助，通过上下文感知和快捷交互提升思维整理效率",
 	"author": "Your Name",
 	"authorUrl": "https://github.com/yourusername",
 	"isDesktopOnly": true

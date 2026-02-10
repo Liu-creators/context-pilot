@@ -1,90 +1,209 @@
-# Obsidian Sample Plugin
+# AI Companion
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+> 你的 AI 写作伙伴 - 为 Obsidian 提供智能辅助功能
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+AI Companion 是一个 Obsidian 插件，通过 AI 技术为你的写作和思维整理提供智能辅助。它不会替你写作，而是作为你的伙伴，在需要时提供建议、灵感和帮助。
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## ✨ 核心特性
 
-## First time developing plugins?
+### 📝 编辑器智能辅助
 
-Quick starting guide for new plugin devs:
+- **快速触发**：在编辑器中输入 `/` 即可唤起 AI 助手
+- **实时建议**：输入问题后立即获得 AI 响应
+- **上下文感知**：支持多种上下文模式
+  - 无上下文：纯粹的问答
+  - 包含上文：AI 会参考光标前的内容
+  - 遵循设置：根据你的配置自动选择上下文范围
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### 🎨 Canvas 画布集成 🚧
 
-## Releasing new releases
+> ⚠️ **开发中**：Canvas 功能正在开发中，暂未完全实现
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- 在 Canvas 节点中同样可以使用 `/` 触发 AI（计划中）
+- 支持在思维导图和画布中进行 AI 辅助创作（计划中）
+- 与编辑器保持一致的交互体验（计划中）
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### ⌨️ 灵活的快捷键系统
 
-## Adding your plugin to the community plugin list
+- **可自定义快捷键**：为不同的上下文模式配置专属快捷键
+- **默认配置**：
+  - `Enter`：无上下文提交
+  - `Shift+Enter`：包含光标前上文
+  - `Cmd/Ctrl+Enter`：遵循设置配置
+- 在设置中可视化配置快捷键组合
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+### 🎯 命令面板支持
 
-## How to use
+- **触发 AI 输入**：通过命令面板快速唤起 AI
+- **使用选中文本询问 AI**：选中文本后直接提问
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### 🎨 美观的 UI 设计
 
-## Manually installing the plugin
+- **Callout 样式响应**：AI 响应以美观的 Callout 块显示
+- **可自定义颜色**：支持自定义 AI 响应块的颜色主题
+- **加载动画**：优雅的加载指示器
+- **错误提示**：清晰的错误信息展示
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## 🚀 快速开始
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+### 安装
 
-## Funding URL
+1. 下载最新版本的 `main.js`、`manifest.json` 和 `styles.css`
+2. 在你的 Vault 中创建文件夹：`<Vault>/.obsidian/plugins/obsidian-ai-companion/`
+3. 将下载的文件复制到该文件夹
+4. 重启 Obsidian
+5. 在 **设置 → 社区插件** 中启用 AI Companion
 
-You can include funding URLs where people who use your plugin can financially support it.
+### 配置 AI 服务
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+1. 打开 **设置 → AI Companion**
+2. 配置你的 AI 服务：
+   - **API 端点**：你的 AI 服务地址
+   - **API 密钥**：你的 API 密钥
+   - **模型名称**：使用的模型（如 `gpt-4`）
+3. 点击 **测试连接** 验证配置
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+### 基本使用
+
+1. 在编辑器中输入 `/`
+2. 输入你的问题或需求
+3. 按 `Enter` 提交（或使用其他配置的快捷键）
+4. AI 响应会以 Callout 块的形式插入到光标位置
+
+## 📖 使用场景
+
+### 写作辅助
+
+```
+/帮我扩展这段话的论述
+/这段文字有什么可以改进的地方
+/用更专业的语言重写这段内容
 ```
 
-If you have multiple URLs, you can also do:
+### 思维整理
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+```
+/总结上面的要点
+/从这些内容中提取关键信息
+/帮我理清这些概念之间的关系
 ```
 
-## API Documentation
+### 知识问答
 
-See https://docs.obsidian.md
+```
+/解释一下量子纠缠的原理
+/TypeScript 中的泛型是什么
+/比较一下这两种方法的优缺点
+```
+
+## ⚙️ 高级配置
+
+### 上下文提取设置
+
+- **提取模式**：
+  - 光标前所有内容
+  - 当前段落
+  - 当前标题下的内容
+  - 整个文档
+- **最大 Token 数**：控制发送给 AI 的上下文长度
+- **包含元数据**：是否包含文件名、标签等信息
+
+### 快捷键自定义
+
+在设置中可以为每种上下文模式配置独立的快捷键组合：
+
+- 选择修饰键（Ctrl、Shift、Alt、Cmd）
+- 选择主键
+- 关联上下文类型
+
+### 样式自定义
+
+- 自定义 AI 响应 Callout 的颜色
+- 支持 RGB 和 HEX 颜色格式
+- 实时预览效果
+
+## 🔧 开发
+
+### 环境要求
+
+- Node.js 18+
+- npm
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 开发模式
+
+```bash
+npm run dev
+```
+
+### 构建
+
+```bash
+npm run build
+```
+
+### 测试
+
+```bash
+npm run test
+npm run test:coverage
+```
+
+### 代码检查
+
+```bash
+npm run lint
+```
+
+## 📁 项目结构
+
+```
+src/
+├── main.ts                 # 插件入口
+├── settings.ts             # 设置界面
+├── commands/               # 命令注册
+├── services/               # 核心服务
+│   ├── ai-client.ts       # AI 客户端
+│   ├── request-queue.ts   # 请求队列
+│   └── response-parser.ts # 响应解析
+├── ui/                     # UI 组件
+│   ├── editor-ui-controller.ts
+│   ├── loading-indicator.ts
+│   └── error-display.ts
+├── suggest/                # 建议系统
+│   └── ai-editor-suggest.ts
+├── canvas/                 # Canvas 集成（开发中）
+│   ├── canvas-trigger-handler.ts
+│   └── canvas-ui-controller.ts
+└── utils/                  # 工具函数
+    ├── context-extractor.ts
+    └── error-handler.ts
+```
+
+## 🔒 隐私与安全
+
+- **本地优先**：插件本身不收集任何数据
+- **API 通信**：仅在你主动触发时才与配置的 AI 服务通信
+- **数据控制**：你完全控制发送给 AI 的内容
+- **透明配置**：所有设置都在本地，清晰可见
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+0-BSD License
+
+## 🙏 致谢
+
+感谢 Obsidian 社区的支持和反馈。
+
+---
+
+**注意**：此插件需要配置有效的 AI 服务才能使用。请确保你有可用的 API 端点和密钥。
