@@ -1,5 +1,5 @@
 {
-	"name": "ai-companion",
+	"name": "context-pilot",
 	"version": "0.1.2",
 	"description": "你的 AI 写作伙伴 - 为 Obsidian 提供智能辅助功能",
 	"main": "main.js",

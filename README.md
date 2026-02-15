@@ -1,4 +1,4 @@
-# AI Companion
+# Context Pilot
 
 > 通过快捷键灵活控制 AI 上下文的 Obsidian 插件
 
@@ -10,7 +10,7 @@
 - **上下文干扰**：有时我们需要 AI 理解前文，有时又希望它只回答当前问题，不受之前内容影响
 - **笔记场景特殊**：与纯对话不同，做笔记时更需要精确控制 AI 看到什么、不看到什么
 
-AI Companion 解决了这个问题：**通过不同的快捷键，让你在提交问题时即时决定是否包含上下文**。
+Context Pilot 解决了这个问题：**通过不同的快捷键，让你在提交问题时即时决定是否包含上下文**。
 
 ## ✨ 核心特性
 
@@ -37,7 +37,7 @@ AI Companion 解决了这个问题：**通过不同的快捷键，让你在提�
 
 > ✨ **全新功能**：在无限画布中与 AI 协作思考
 
-AI Companion 现已深度集成到 Obsidian Canvas 中，为你提供可视化的思维辅助：
+Context Pilot 现已深度集成到 Obsidian Canvas 中，为你提供可视化的思维辅助：
 
 - **节点工具栏集成**：选中任意文本节点，点击浮动工具栏上的 "AI 助手" 按钮即可唤起。
 - **智能上下文感知**：
@@ -65,14 +65,14 @@ AI Companion 现已深度集成到 Obsidian Canvas 中，为你提供可视化�
 ### 安装
 
 1. 下载最新版本的 `main.js`、`manifest.json` 和 `styles.css`
-2. 在你的 Vault 中创建文件夹：`<Vault>/.obsidian/plugins/obsidian-ai-companion/`
+2. 在你的 Vault 中创建文件夹：`<Vault>/.obsidian/plugins/context-pilot/`
 3. 将下载的文件复制到该文件夹
 4. 重启 Obsidian
-5. 在 **设置 → 社区插件** 中启用 AI Companion
+5. 在 **设置 → 社区插件** 中启用 Context Pilot
 
 ### 配置 AI 服务
 
-1. 打开 **设置 → AI Companion**
+1. 打开 **设置 → Context Pilot**
 2. 配置你的 AI 服务：
    - **API 端点**：你的 AI 服务地址（默认：DeepSeek API）
    - **API 密钥**：你的 API 密钥
@@ -143,7 +143,7 @@ AI Companion 现已深度集成到 Obsidian Canvas 中，为你提供可视化�
 
 ### 上下文提取设置
 
-在 **设置 → AI Companion → 上下文配置** 中：
+在 **设置 → Context Pilot → 上下文配置** 中：
 
 - **启用上下文**：全局开关，控制是否启用上下文功能
 - **上下文范围**：
@@ -155,7 +155,7 @@ AI Companion 现已深度集成到 Obsidian Canvas 中，为你提供可视化�
 
 ### 快捷键自定义
 
-在 **设置 → AI Companion → 上下文快捷键** 中：
+在 **设置 → Context Pilot → 上下文快捷键** 中：
 
 1. 查看现有快捷键配置
 2. 点击快捷键按钮修改组合键
