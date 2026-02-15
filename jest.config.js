@@ -24,7 +24,8 @@ export default {
   
   // 模块路径映射（与 tsconfig.json 的 baseUrl 保持一致）
   moduleNameMapper: {
-    '^src/(.*)$': '<rootDir>/src/$1'
+    '^src/(.*)$': '<rootDir>/src/$1',
+    '^obsidian$': '<rootDir>/__mocks__/obsidian.ts'
   },
   
   // 根目录

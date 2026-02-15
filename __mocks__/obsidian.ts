@@ -86,6 +86,35 @@ export class Plugin {
   }
 }
 
+// Mock View 类
+export class View {
+  app: App;
+  leaf: WorkspaceLeaf;
+  containerEl: HTMLElement;
+
+  constructor(leaf: WorkspaceLeaf) {
+    this.leaf = leaf;
+    this.app = {} as App;
+    this.containerEl = document.createElement('div');
+  }
+
+  getViewType(): string {
+    return 'unknown';
+  }
+
+  getDisplayText(): string {
+    return '';
+  }
+
+  async onOpen(): Promise<void> {
+    // Mock 实现
+  }
+
+  async onClose(): Promise<void> {
+    // Mock 实现
+  }
+}
+
 // Mock PluginSettingTab 类
 export class PluginSettingTab {
   app: App;

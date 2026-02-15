@@ -18,6 +18,50 @@ export interface ContextShortcut {
 }
 
 /**
+ * Canvas 上下文快捷键配置接口
+ */
+export interface CanvasContextShortcut {
+	/** 快捷键修饰符 */
+	modifiers: string[];
+	/** 快捷键 */
+	key: string;
+	/** 上下文范围类型 */
+	contextType: 'current-node' | 'connected-nodes';
+	/** 显示名称 */
+	displayName: string;
+}
+
+/**
+ * Canvas 设置接口
+ * 
+ * 定义 Canvas AI 功能的配置选项。
+ * 
+ * **验证需求：9.1, 9.2**
+ */
+export interface CanvasSettings {
+	/** 是否启用 Canvas 功能 */
+	enabled: boolean;
+	
+	/** 是否在输入弹框中显示快捷键提示 */
+	showShortcutHints: boolean;
+	
+	/** Canvas 上下文快捷键配置 */
+	shortcuts: CanvasContextShortcut[];
+	
+	/** 新节点位置偏移 */
+	newNodeOffset: {
+		x: number;
+		y: number;
+	};
+	
+	/** 新节点默认大小 */
+	newNodeSize: {
+		width: number;
+		height: number;
+	};
+}
+
+/**
  * AI 插件设置接口
  * 
  * 定义了插件的所有配置选项，包括 AI 服务配置、上下文配置和 UI 配置。
@@ -86,7 +130,40 @@ export interface AIPluginSettings {
 	
 	/** 记录 AI 交互日志 */
 	logAIInteractions: boolean;
+	
+	// ========== Canvas 配置 ==========
+	
+	/** Canvas AI 功能设置 */
+	canvasSettings: CanvasSettings;
 }
+
+/**
+ * 默认 Canvas 设置常量
+ * 
+ * 提供 Canvas 功能的默认配置值。
+ * 
+ * **验证需求：9.2**
+ */
+export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
+	enabled: true,
+	showShortcutHints: true,
+	shortcuts: [
+		{
+			modifiers: [],
+			key: 'Enter',
+			contextType: 'current-node',
+			displayName: '仅当前节点'
+		},
+		{
+			modifiers: ['Shift'],
+			key: 'Enter',
+			contextType: 'connected-nodes',
+			displayName: '包含相连节点'
+		}
+	],
+	newNodeOffset: { x: 0, y: 150 },
+	newNodeSize: { width: 400, height: 200 }
+};
 
 /**
  * 默认设置常量
@@ -134,7 +211,10 @@ export const DEFAULT_SETTINGS: AIPluginSettings = {
 	// 高级配置
 	maxConcurrentRequests: 3,
 	debugMode: false,
-	logAIInteractions: false
+	logAIInteractions: false,
+	
+	// Canvas 配置
+	canvasSettings: DEFAULT_CANVAS_SETTINGS
 };
 
 /**
@@ -568,6 +648,181 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					this.plugin.settings.logAIInteractions = value;
 					await this.plugin.saveSettings();
 				}));
+
+		// ========== Canvas 配置 ==========
+		containerEl.createEl('h2', { text: 'Canvas 配置' });
+		
+		// 启用 Canvas 功能
+		new Setting(containerEl)
+			.setName('启用 Canvas 功能')
+			.setDesc('在 Obsidian Canvas 中启用 AI 助手')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.canvasSettings.enabled)
+				.onChange(async (value) => {
+					this.plugin.settings.canvasSettings.enabled = value;
+					await this.plugin.saveSettings();
+					this.display();
+				}));
+				
+		if (this.plugin.settings.canvasSettings.enabled) {
+			// Canvas 快捷键提示
+			new Setting(containerEl)
+				.setName('显示快捷键提示')
+				.setDesc('在 Canvas 输入框中显示快捷键提示')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.canvasSettings.showShortcutHints)
+					.onChange(async (value) => {
+						this.plugin.settings.canvasSettings.showShortcutHints = value;
+						await this.plugin.saveSettings();
+					}));
+
+			// Canvas 快捷键配置
+			containerEl.createEl('h3', { text: 'Canvas 快捷键' });
+			containerEl.createEl('p', { 
+				text: '配置 Canvas 中的上下文快捷键。',
+				cls: 'setting-item-description'
+			});
+
+			// 确保 shortcuts 数组存在 (为了兼容旧配置)
+			if (!this.plugin.settings.canvasSettings.shortcuts) {
+				this.plugin.settings.canvasSettings.shortcuts = DEFAULT_CANVAS_SETTINGS.shortcuts;
+			}
+
+			this.plugin.settings.canvasSettings.shortcuts.forEach((shortcut, index) => {
+				const shortcutSetting = new Setting(containerEl)
+					.setName(`快捷键 ${index + 1}`)
+					.setDesc(this.getShortcutDescription(shortcut));
+
+				// 显示快捷键组合（可点击编辑）
+				const shortcutText = this.formatShortcut(shortcut);
+				shortcutSetting.addButton(button => {
+					button
+						.setButtonText(shortcutText)
+						.setTooltip('点击修改快捷键')
+						.onClick(async () => {
+							// 打开快捷键捕获模态框
+							new ShortcutCaptureModal(this.app, async (captured) => {
+								if (captured) {
+									const shortcuts = this.plugin.settings.canvasSettings.shortcuts;
+									if (shortcuts[index]) {
+										shortcuts[index].modifiers = captured.modifiers;
+										shortcuts[index].key = captured.key;
+										await this.plugin.saveSettings();
+										this.display();
+									}
+								}
+							}).open();
+						});
+				});
+
+				// 上下文类型选择
+				shortcutSetting.addDropdown(dropdown => dropdown
+					.addOption('current-node', '仅当前节点')
+					.addOption('connected-nodes', '包含相连节点')
+					.setValue(shortcut.contextType)
+					.onChange(async (value) => {
+						const shortcuts = this.plugin.settings.canvasSettings.shortcuts;
+						if (shortcuts[index]) {
+							shortcuts[index].contextType = value as any;
+							// 更新显示名称
+							shortcuts[index].displayName = value === 'current-node' ? '仅当前节点' : '包含相连节点';
+							await this.plugin.saveSettings();
+							this.display();
+						}
+					}));
+
+				// 删除按钮（至少保留一个快捷键）
+				if (this.plugin.settings.canvasSettings.shortcuts.length > 1) {
+					shortcutSetting.addButton(button => button
+						.setButtonText('删除')
+						.setWarning()
+						.onClick(async () => {
+							this.plugin.settings.canvasSettings.shortcuts.splice(index, 1);
+							await this.plugin.saveSettings();
+							this.display();
+						}));
+				}
+			});
+
+			// 添加新快捷键按钮
+			new Setting(containerEl)
+				.setName('添加 Canvas 快捷键')
+				.setDesc('添加新的 Canvas 上下文快捷键配置')
+				.addButton(button => button
+					.setButtonText('添加')
+					.setCta()
+					.onClick(async () => {
+						// 添加一个新的快捷键配置
+						this.plugin.settings.canvasSettings.shortcuts.push({
+							modifiers: ['Ctrl'],
+							key: 'Enter',
+							contextType: 'current-node',
+							displayName: '仅当前节点'
+						});
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+		
+			// 新节点位置偏移 X
+			new Setting(containerEl)
+				.setName('新节点位置偏移 X')
+				.setDesc('AI 响应节点相对于触发节点的水平偏移（像素）')
+				.addText(text => text
+					.setPlaceholder('0')
+					.setValue(String(this.plugin.settings.canvasSettings.newNodeOffset.x))
+					.onChange(async (value) => {
+						const offset = parseInt(value);
+						if (!isNaN(offset)) {
+							this.plugin.settings.canvasSettings.newNodeOffset.x = offset;
+							await this.plugin.saveSettings();
+						}
+					}));
+
+			// 新节点位置偏移 Y
+			new Setting(containerEl)
+				.setName('新节点位置偏移 Y')
+				.setDesc('AI 响应节点相对于触发节点的垂直偏移（像素）')
+				.addText(text => text
+					.setPlaceholder('150')
+					.setValue(String(this.plugin.settings.canvasSettings.newNodeOffset.y))
+					.onChange(async (value) => {
+						const offset = parseInt(value);
+						if (!isNaN(offset)) {
+							this.plugin.settings.canvasSettings.newNodeOffset.y = offset;
+							await this.plugin.saveSettings();
+						}
+					}));
+
+			// 新节点默认宽度
+			new Setting(containerEl)
+				.setName('新节点默认宽度')
+				.setDesc('AI 响应节点的默认宽度（像素）')
+				.addText(text => text
+					.setPlaceholder('400')
+					.setValue(String(this.plugin.settings.canvasSettings.newNodeSize.width))
+					.onChange(async (value) => {
+						const width = parseInt(value);
+						if (!isNaN(width) && width > 0) {
+							this.plugin.settings.canvasSettings.newNodeSize.width = width;
+							await this.plugin.saveSettings();
+						}
+					}));
+
+			// 新节点默认高度
+			new Setting(containerEl)
+				.setName('新节点默认高度')
+				.setDesc('AI 响应节点的默认高度（像素）')
+				.addText(text => text
+					.setPlaceholder('200')
+					.setValue(String(this.plugin.settings.canvasSettings.newNodeSize.height))
+					.onChange(async (value) => {
+						const height = parseInt(value);
+						if (!isNaN(height) && height > 0) {
+							this.plugin.settings.canvasSettings.newNodeSize.height = height;
+							await this.plugin.saveSettings();
+						}
+					}));
+		}
 	}
 	
 	/**
@@ -639,42 +894,30 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	}
 	
 	/**
-	 * 格式化快捷键显示
-	 * 
-	 * @param shortcut 快捷键配置
-	 * @returns 格式化的快捷键字符串
-	 */
-	private formatShortcut(shortcut: ContextShortcut): string {
-		const parts = shortcut.modifiers.map(mod => {
-			// 在 Mac 上将 Mod 显示为 Cmd，其他平台显示为 Ctrl
-			if (mod === 'Mod') {
-				return this.isMac() ? 'Cmd' : 'Ctrl';
-			}
-			return mod;
-		});
-		parts.push(shortcut.key);
-		return parts.join('+');
-	}
-	
-	/**
-	 * 检测是否为 Mac 平台
-	 */
-	private isMac(): boolean {
-		return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-	}
-	
-	/**
 	 * 获取快捷键描述
-	 * 
-	 * @param shortcut 快捷键配置
-	 * @returns 描述文本
 	 */
-	private getShortcutDescription(shortcut: ContextShortcut): string {
-		const contextTypeNames: Record<string, string> = {
-			'none': '不包含上下文',
-			'before-cursor': '包含光标前的全部内容（含双链）',
-			'settings': '根据设置中的上下文范围'
-		};
-		return contextTypeNames[shortcut.contextType] || shortcut.displayName;
+	private getShortcutDescription(shortcut: any): string {
+		const keys = [...shortcut.modifiers, shortcut.key].join('+');
+		// 根据 contextType 返回描述
+		if (shortcut.contextType === 'current-node') return `${keys} -> 仅发送当前节点内容`;
+		if (shortcut.contextType === 'connected-nodes') return `${keys} -> 发送包含相连节点上下文的内容`;
+		
+		// 兼容普通 shortcuts
+		if (shortcut.contextType === 'none') return `${keys} -> 仅发送 prompt`;
+		if (shortcut.contextType === 'before-cursor') return `${keys} -> 包含光标前内容`;
+		if (shortcut.contextType === 'settings') return `${keys} -> 遵循插件设置`;
+		
+		return `${keys} -> ${shortcut.displayName}`;
+	}
+
+	/**
+	 * 格式化快捷键显示
+	 */
+	private formatShortcut(shortcut: any): string {
+		const mods = shortcut.modifiers.map((m: string) => {
+			if (m === 'Mod') return 'Cmd/Ctrl';
+			return m;
+		});
+		return [...mods, shortcut.key].join(' + ');
 	}
 }

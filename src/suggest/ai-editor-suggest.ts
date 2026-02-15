@@ -49,6 +49,10 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 		super(app);
 		this.plugin = plugin;
 		this.editorUIController = editorUIController;
+		
+		// 自定义建议弹窗的类名，用于样式定制
+		// @ts-ignore - 访问受保护的属性
+		this.suggestEl.addClass('ai-editor-suggest');
 	}
 	
 	/**

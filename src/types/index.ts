@@ -35,3 +35,28 @@ export type {
 	ContextExtractionConfig,
 	ExtractedContext
 } from './context';
+
+// Canvas 相关类型
+export type {
+	Canvas,
+	CanvasNode,
+	CanvasTextNode,
+	CanvasFileNode,
+	CanvasLinkNode,
+	CanvasGroupNode,
+	CanvasEdge,
+	CreateNodeOptions,
+	Point,
+	BoundingBox,
+	CanvasNodePosition,
+	CanvasAINodeConfig
+} from './canvas';
+
+// Canvas 类型守卫函数
+export {
+	isTextNode,
+	isFileNode,
+	isLinkNode,
+	isGroupNode,
+	isCanvasView
+} from './canvas-guards';

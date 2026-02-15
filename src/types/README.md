@@ -46,13 +46,15 @@ Canvas API 类型声明（⚠️ 实验性功能），包括：
 - `CanvasNode` - Canvas 节点基础接口
 - `CanvasTextNode` - Canvas 文本节点接口
 - `CanvasFileNode` - Canvas 文件节点接口
+- `CanvasLinkNode` - Canvas 链接节点接口
+- `CanvasGroupNode` - Canvas 分组节点接口
 - `CanvasEdge` - Canvas 边（连接线）接口
 - `CreateNodeOptions` - 创建节点的选项接口
 - `Point` - 二维坐标点接口
 - `BoundingBox` - 边界框接口
 - `CanvasNodePosition` - Canvas 节点位置配置接口
 - `CanvasAINodeConfig` - Canvas AI 响应节点配置接口
-- 类型守卫函数：`isTextNode`, `isFileNode`, `isCanvasView`
+- 类型守卫函数：`isTextNode`, `isFileNode`, `isLinkNode`, `isGroupNode`, `isCanvasView`
 
 **⚠️ 重要提示：** Canvas API 不是 Obsidian 官方公开的稳定 API，这些类型定义可能在未来的 Obsidian 版本中发生变化。
 
