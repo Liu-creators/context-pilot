@@ -18,5 +18,18 @@ main.js
 # obsidian
 data.json
 
-# release artifacts
-*.zip
+# Exclude macOS Finder (System Explorer) View States
+.DS_Store
+
+# Jest 测试覆盖率报告
+coverage/
+*.lcov
+
+# Jest 缓存
+.jest/
+
+# Kiro AI assistant configuration
+.kiro/
+
+# Obsidian hot reload marker
+.hotreload
