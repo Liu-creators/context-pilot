@@ -108,6 +108,31 @@ export class AIClient {
 	}
 	
 	/**
+	 * 获取请求头
+	 * 
+	 * 根据配置生成请求头，包括认证信息和特定服务商的头信息。
+	 */
+	private getHeaders(): Record<string, string> {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json'
+		};
+
+		// 如果有 API Key，添加 Authorization 头
+		// 本地模型（如 Ollama）可能不需要 Key
+		if (this.config.apiKey) {
+			headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+		}
+
+		// OpenRouter 特定头信息
+		if (this.config.apiEndpoint.includes('openrouter.ai') || this.config.provider === 'openrouter') {
+			headers['HTTP-Referer'] = 'https://github.com/obsidian-plugins/obsidian-sample-plugin';
+			headers['X-Title'] = 'Obsidian AI Plugin';
+		}
+
+		return headers;
+	}
+
+	/**
 	 * 执行单次请求
 	 * 
 	 * @param request AI 请求对象
@@ -143,10 +168,7 @@ export class AIClient {
 			// 发送请求
 			const response = await fetch(this.config.apiEndpoint, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${this.config.apiKey}`
-				},
+				headers: this.getHeaders(),
 				body: JSON.stringify(requestBody),
 				signal: controller.signal
 			});

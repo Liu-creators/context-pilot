@@ -34,6 +34,25 @@ export class SettingsManager {
 	async loadSettings(): Promise<void> {
 		const loadedData = await this.plugin.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+		
+		// 迁移旧配置：如果存在旧的顶层配置但没有 providers 配置
+		if (loadedData && !loadedData.providers && loadedData.apiEndpoint) {
+			console.log('[SettingsManager] Migrating old settings to new provider structure');
+			const isDeepSeek = loadedData.apiEndpoint.includes('deepseek');
+			const targetProvider = isDeepSeek ? 'deepseek' : 'custom';
+			
+			this.settings.selectedProvider = targetProvider;
+			// 确保 providers 对象存在（虽然 DEFAULT_SETTINGS 应该已经提供了）
+			if (!this.settings.providers) {
+				this.settings.providers = JSON.parse(JSON.stringify(DEFAULT_SETTINGS.providers));
+			}
+			
+			this.settings.providers[targetProvider] = {
+				apiEndpoint: loadedData.apiEndpoint,
+				apiKey: loadedData.apiKey || '',
+				model: loadedData.model || ''
+			};
+		}
 	}
 	
 	/**
@@ -46,8 +65,11 @@ export class SettingsManager {
 	 * @throws {Error} 如果 API 连接验证失败
 	 */
 	async saveSettings(): Promise<void> {
+		const config = this.getAIConfig();
+		
 		// 如果配置了 API 端点和密钥，则验证连接
-		if (this.settings.apiEndpoint && this.settings.apiKey) {
+		// 注意：Ollama/LM Studio 可能不需要 API Key
+		if (config.apiEndpoint && (config.apiKey || config.provider === 'ollama' || config.provider === 'lmstudio')) {
 			const isValid = await this.validateConnection();
 			if (!isValid) {
 				throw new Error('API 连接验证失败，无法保存设置');
@@ -85,10 +107,14 @@ export class SettingsManager {
 	 * @returns AI 服务配置对象
 	 */
 	getAIConfig(): AIServiceConfig {
+		const provider = this.settings.selectedProvider || 'deepseek';
+		const config = this.settings.providers[provider];
+		
 		return {
-			apiEndpoint: this.settings.apiEndpoint,
-			apiKey: this.settings.apiKey,
-			model: this.settings.model,
+			provider: provider,
+			apiEndpoint: config.apiEndpoint,
+			apiKey: config.apiKey,
+			model: config.model,
 			timeout: this.settings.timeout,
 			maxRetries: this.settings.maxRetries,
 			logAIInteractions: this.settings.logAIInteractions,

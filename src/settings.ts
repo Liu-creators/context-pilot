@@ -32,6 +32,23 @@ export interface CanvasContextShortcut {
 }
 
 /**
+ * AI 服务提供商类型
+ */
+export type AIProvider = 'deepseek' | 'moonshot' | 'qwen' | 'zhipu' | 'openai' | 'openrouter' | 'ollama' | 'lmstudio' | 'custom';
+
+/**
+ * AI 服务提供商配置接口
+ */
+export interface AIProviderConfig {
+	/** API 端点 URL */
+	apiEndpoint: string;
+	/** API 密钥 */
+	apiKey: string;
+	/** 模型名称 */
+	model: string;
+}
+
+/**
  * Canvas 设置接口
  * 
  * 定义 Canvas AI 功能的配置选项。
@@ -71,14 +88,16 @@ export interface CanvasSettings {
 export interface AIPluginSettings {
 	// ========== AI 服务配置 ==========
 	
-	/** API 端点 URL */
-	apiEndpoint: string;
-	
-	/** API 密钥（加密存储） */
-	apiKey: string;
-	
-	/** AI 模型名称 */
-	model: string;
+	/** 当前选择的 AI 服务提供商 */
+	selectedProvider: AIProvider;
+
+	/** 各个提供商的配置 */
+	providers: Record<AIProvider, AIProviderConfig>;
+
+	// 兼容旧版本字段（可选，用于迁移）
+	apiEndpoint?: string;
+	apiKey?: string;
+	model?: string;
 	
 	/** 请求超时时间（毫秒） */
 	timeout: number;
@@ -174,10 +193,56 @@ export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
  * **验证需求：1.1, 1.2, 1.3**
  */
 export const DEFAULT_SETTINGS: AIPluginSettings = {
-	// AI 服务配置 - DeepSeek
-	apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
-	apiKey: '',
-	model: 'deepseek-chat',
+	// AI 服务配置
+	selectedProvider: 'deepseek',
+	providers: {
+		deepseek: {
+			apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
+			apiKey: '',
+			model: 'deepseek-chat'
+		},
+		moonshot: {
+			apiEndpoint: 'https://api.moonshot.cn/v1/chat/completions',
+			apiKey: '',
+			model: 'moonshot-v1-8k'
+		},
+		qwen: {
+			apiEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+			apiKey: '',
+			model: 'qwen-plus'
+		},
+		zhipu: {
+			apiEndpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+			apiKey: '',
+			model: 'glm-4'
+		},
+		openai: {
+			apiEndpoint: 'https://api.openai.com/v1/chat/completions',
+			apiKey: '',
+			model: 'gpt-4o'
+		},
+		openrouter: {
+			apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
+			apiKey: '',
+			model: 'anthropic/claude-3.5-sonnet'
+		},
+		ollama: {
+			apiEndpoint: 'http://localhost:11434/v1/chat/completions',
+			apiKey: 'ollama', // Ollama 通常不需要 key，但这可以作为占位符
+			model: 'llama3'
+		},
+		lmstudio: {
+			apiEndpoint: 'http://localhost:1234/v1/chat/completions',
+			apiKey: 'lm-studio',
+			model: 'local-model'
+		},
+		custom: {
+			apiEndpoint: '',
+			apiKey: '',
+			model: ''
+		}
+	},
+	
 	timeout: 30000,
 	maxRetries: 2,
 	
@@ -226,6 +291,7 @@ export const DEFAULT_SETTINGS: AIPluginSettings = {
  */
 export class AIPluginSettingTab extends PluginSettingTab {
 	plugin: MyPlugin;
+	private activeTab: 'ai-service' | 'interaction' | 'context' | 'canvas' | 'appearance' = 'ai-service';
 
 	constructor(app: App, plugin: MyPlugin) {
 		super(app, plugin);
@@ -236,76 +302,232 @@ export class AIPluginSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// ========== AI 服务配置 ==========
-		containerEl.createEl('h2', { text: 'AI 服务配置' });
+		// 创建 Tab 导航栏
+		this.renderTabBar(containerEl);
 
-		// API 端点
+		// 根据当前激活的 Tab 渲染对应内容
+		const contentContainer = containerEl.createDiv('settings-tab-content');
+		
+		switch (this.activeTab) {
+			case 'ai-service':
+				this.displayAIServiceSettings(contentContainer);
+				break;
+			case 'interaction':
+				this.displayInteractionSettings(contentContainer);
+				break;
+			case 'context':
+				this.displayContextSettings(contentContainer);
+				break;
+			case 'canvas':
+				this.displayCanvasSettings(contentContainer);
+				break;
+			case 'appearance':
+				this.displayAppearanceSettings(contentContainer);
+				break;
+		}
+	}
+
+	private renderTabBar(containerEl: HTMLElement): void {
+		const tabBar = containerEl.createDiv('nav-buttons-container');
+		tabBar.style.display = 'flex';
+		tabBar.style.marginBottom = '20px';
+		tabBar.style.gap = '10px';
+		tabBar.style.borderBottom = '1px solid var(--background-modifier-border)';
+		tabBar.style.paddingBottom = '10px';
+
+		const tabs: { id: 'ai-service' | 'interaction' | 'context' | 'canvas' | 'appearance'; name: string }[] = [
+			{ id: 'ai-service', name: 'AI 服务' },
+			{ id: 'interaction', name: '交互与行为' },
+			{ id: 'context', name: '上下文与快捷键' },
+			{ id: 'canvas', name: '白板 (Canvas)' },
+			{ id: 'appearance', name: '外观与高级' }
+		];
+
+		tabs.forEach(tab => {
+			const button = tabBar.createEl('button', { text: tab.name });
+			button.style.flex = '1';
+			button.style.cursor = 'pointer';
+			
+			if (this.activeTab === tab.id) {
+				button.classList.add('mod-cta');
+			} else {
+				button.onclick = () => {
+					this.activeTab = tab.id;
+					this.display();
+				};
+			}
+		});
+	}
+
+	private displayAIServiceSettings(containerEl: HTMLElement): void {
+		containerEl.createEl('h2', { text: 'AI 服务配置' });
+		containerEl.createEl('p', { text: '配置 AI 模型提供商的连接信息。', cls: 'setting-item-description' });
+
+		// 1. AI 服务提供商选择
 		new Setting(containerEl)
-			.setName('API 端点')
-			.setDesc('AI 服务的 API 端点 URL（默认：DeepSeek API）')
-			.addText(text => text
-				.setPlaceholder('https://api.deepseek.com/v1/chat/completions')
-				.setValue(this.plugin.settings.apiEndpoint)
+			.setName('AI 服务提供商')
+			.setDesc('选择您要使用的 AI 服务平台')
+			.addDropdown(dropdown => dropdown
+				.addOption('deepseek', 'DeepSeek (深度求索)')
+				.addOption('moonshot', 'Moonshot (Kimi)')
+				.addOption('qwen', 'Qwen (通义千问)')
+				.addOption('zhipu', 'Zhipu (智谱 AI)')
+				.addOption('openai', 'OpenAI')
+				.addOption('openrouter', 'OpenRouter')
+				.addOption('ollama', 'Ollama (本地)')
+				.addOption('lmstudio', 'LM Studio (本地)')
+				.addOption('custom', '自定义 (Custom)')
+				.setValue(this.plugin.settings.selectedProvider || 'deepseek')
 				.onChange(async (value) => {
-					this.plugin.settings.apiEndpoint = value.trim();
-					// 不自动保存，等待用户点击测试连接
+					this.plugin.settings.selectedProvider = value as AIProvider;
+					await this.plugin.saveSettings();
+					this.display(); // 刷新界面以显示对应的配置项
 				}));
 
-		// API 密钥
-		new Setting(containerEl)
-			.setName('API 密钥')
-			.setDesc('您的 AI 服务 API 密钥（将安全存储）')
-			.addText(text => {
-				text
-					.setPlaceholder('sk-...')
-					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value.trim();
-						// 不自动保存，等待用户点击测试连接
-					});
-				// 设置为密码输入框
-				text.inputEl.type = 'password';
-			});
+		const provider = this.plugin.settings.selectedProvider || 'deepseek';
+		const config = this.plugin.settings.providers[provider];
 
-		// AI 模型
+		// 2. API 端点
 		new Setting(containerEl)
-			.setName('AI 模型')
-			.setDesc('要使用的 AI 模型名称（DeepSeek: deepseek-chat 或 deepseek-coder）')
-			.addDropdown(dropdown => dropdown
-				.addOption('deepseek-chat', 'DeepSeek Chat')
-				.addOption('deepseek-coder', 'DeepSeek Coder')
-				.addOption('custom', '自定义模型')
-				.setValue(
-					this.plugin.settings.model === 'deepseek-chat' || 
-					this.plugin.settings.model === 'deepseek-coder' 
-						? this.plugin.settings.model 
-						: 'custom'
-				)
+			.setName('API 端点')
+			.setDesc(`AI 服务的 API 端点 URL${provider === 'ollama' ? ' (例如 http://localhost:11434/v1/chat/completions)' : ''}`)
+			.addText(text => text
+				.setPlaceholder('https://api.example.com/v1/chat/completions')
+				.setValue(config.apiEndpoint)
 				.onChange(async (value) => {
-					if (value !== 'custom') {
-						this.plugin.settings.model = value;
+					this.plugin.settings.providers[provider].apiEndpoint = value.trim();
+					// 如果是 Custom 模式，需要手动保存
+					if (provider === 'custom') {
 						await this.plugin.saveSettings();
-						this.display(); // 重新渲染
 					}
-				}))
-			.addText(text => {
-				// 只有选择自定义时才显示文本输入框
-				const isCustom = this.plugin.settings.model !== 'deepseek-chat' && 
-								 this.plugin.settings.model !== 'deepseek-coder';
-				
-				text
-					.setPlaceholder('输入自定义模型名称')
-					.setValue(isCustom ? this.plugin.settings.model : '')
-					.onChange(async (value) => {
-						this.plugin.settings.model = value.trim();
+				}));
+
+		// 3. API 密钥 (本地模型可能不需要)
+		if (provider !== 'ollama' && provider !== 'lmstudio') {
+			new Setting(containerEl)
+				.setName('API 密钥')
+				.setDesc('您的 AI 服务 API 密钥（将安全存储）')
+				.addText(text => {
+					text
+						.setPlaceholder('sk-...')
+						.setValue(config.apiKey)
+						.onChange(async (value) => {
+							this.plugin.settings.providers[provider].apiKey = value.trim();
+							// 如果是 Custom 模式，需要手动保存
+							if (provider === 'custom') {
+								await this.plugin.saveSettings();
+							}
+						});
+					text.inputEl.type = 'password';
+				});
+		}
+
+		// 4. AI 模型
+		const modelSetting = new Setting(containerEl)
+			.setName('AI 模型')
+			.setDesc('要使用的 AI 模型名称');
+		
+		let placeholder = 'gpt-4o';
+		if (provider === 'deepseek') placeholder = 'deepseek-chat';
+		else if (provider === 'qwen') placeholder = 'qwen-plus';
+		else if (provider === 'zhipu') placeholder = 'glm-4';
+		else if (provider === 'ollama') placeholder = 'llama3';
+		else if (provider === 'moonshot') placeholder = 'moonshot-v1-8k';
+		
+		modelSetting.addText(text => text
+			.setPlaceholder(placeholder)
+			.setValue(config.model)
+			.onChange(async (value) => {
+				this.plugin.settings.providers[provider].model = value.trim();
+				await this.plugin.saveSettings();
+			}));
+
+		// 连接测试按钮
+		new Setting(containerEl)
+			.setName('测试 API 连接')
+			.setDesc('验证当前配置是否有效')
+			.addButton(button => button
+				.setButtonText('测试连接')
+				.setCta()
+				.onClick(async () => {
+					button.setDisabled(true);
+					button.setButtonText('测试中...');
+					
+					try {
+						// 先保存当前设置
 						await this.plugin.saveSettings();
-					});
-				
-				// 如果不是自定义模型，隐藏文本输入框
-				if (!isCustom) {
-					text.inputEl.style.display = 'none';
-				}
-			});
+						
+						// 显示成功消息
+						new Notice(`✓ [${provider}] 连接测试成功！`);
+						button.setButtonText('测试成功');
+						
+						setTimeout(() => {
+							button.setButtonText('测试连接');
+							button.setDisabled(false);
+						}, 2000);
+						
+					} catch (error) {
+						// 显示错误消息
+						new Notice('✗ 连接测试失败：' + (error as Error).message);
+						button.setButtonText('测试失败');
+						
+						setTimeout(() => {
+							button.setButtonText('测试连接');
+							button.setDisabled(false);
+						}, 2000);
+					}
+				}));
+	}
+
+	private displayInteractionSettings(containerEl: HTMLElement): void {
+		containerEl.createEl('h2', { text: '交互与行为配置' });
+		containerEl.createEl('p', { text: '自定义 AI 的响应方式和网络行为。', cls: 'setting-item-description' });
+
+		// 流式输出
+		new Setting(containerEl)
+			.setName('流式输出')
+			.setDesc('实时显示 AI 响应内容（逐字输出），关闭后等待完整响应后一次性显示')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.streamResponse)
+				.onChange(async (value) => {
+					this.plugin.settings.streamResponse = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// 默认折叠状态
+		new Setting(containerEl)
+			.setName('默认折叠响应')
+			.setDesc('AI 响应块默认是否折叠')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.defaultCollapsed)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultCollapsed = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// 显示加载消息
+		new Setting(containerEl)
+			.setName('显示加载消息')
+			.setDesc('在等待 AI 响应时显示加载指示器')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showLoadingMessages)
+				.onChange(async (value) => {
+					this.plugin.settings.showLoadingMessages = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// 添加分隔线
+		new Setting(containerEl)
+			.setName('添加分隔线')
+			.setDesc('在每次 AI 交互后添加分隔线（---）以区分不同的对话')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.addSeparatorAfterResponse)
+				.onChange(async (value) => {
+					this.plugin.settings.addSeparatorAfterResponse = value;
+					await this.plugin.saveSettings();
+				}));
+
+		containerEl.createEl('h3', { text: '网络参数' });
 
 		// 请求超时
 		new Setting(containerEl)
@@ -337,46 +559,25 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		// 连接测试按钮
+		// 最大并发请求数
 		new Setting(containerEl)
-			.setName('测试 API 连接')
-			.setDesc('验证 API 端点和密钥是否有效')
-			.addButton(button => button
-				.setButtonText('测试连接')
-				.setCta()
-				.onClick(async () => {
-					button.setDisabled(true);
-					button.setButtonText('测试中...');
-					
-					try {
-						// 先保存当前设置
+			.setName('最大并发请求数')
+			.setDesc('同时进行的最大 AI 请求数量')
+			.addText(text => text
+				.setPlaceholder('3')
+				.setValue(String(this.plugin.settings.maxConcurrentRequests))
+				.onChange(async (value) => {
+					const concurrent = parseInt(value);
+					if (!isNaN(concurrent) && concurrent > 0) {
+						this.plugin.settings.maxConcurrentRequests = concurrent;
 						await this.plugin.saveSettings();
-						
-						// 显示成功消息
-						new Notice('✓ API 连接测试成功！');
-						button.setButtonText('测试成功');
-						
-						// 2秒后恢复按钮文本
-						setTimeout(() => {
-							button.setButtonText('测试连接');
-							button.setDisabled(false);
-						}, 2000);
-						
-					} catch (error) {
-						// 显示错误消息
-						new Notice('✗ API 连接测试失败：' + (error as Error).message);
-						button.setButtonText('测试失败');
-						
-						// 2秒后恢复按钮文本
-						setTimeout(() => {
-							button.setButtonText('测试连接');
-							button.setDisabled(false);
-						}, 2000);
 					}
 				}));
+	}
 
-		// ========== 上下文配置 ==========
-		containerEl.createEl('h2', { text: '上下文配置' });
+	private displayContextSettings(containerEl: HTMLElement): void {
+		containerEl.createEl('h2', { text: '上下文与快捷键配置' });
+		containerEl.createEl('p', { text: '定义 AI 可以读取的上下文范围以及触发方式。', cls: 'setting-item-description' });
 
 		// 启用上下文
 		new Setting(containerEl)
@@ -425,9 +626,9 @@ export class AIPluginSettingTab extends PluginSettingTab {
 		}
 
 		// 上下文快捷键配置
-		containerEl.createEl('h3', { text: '上下文快捷键' });
+		containerEl.createEl('h3', { text: '编辑器快捷键' });
 		containerEl.createEl('p', { 
-			text: '配置不同快捷键对应的上下文范围。在输入 / 后按下对应快捷键提交问题。',
+			text: '配置在文档编辑模式下的 AI 交互方式。使用方法：在编辑器中输入 / 后，按下对应快捷键提交问题。',
 			cls: 'setting-item-description'
 		});
 
@@ -505,53 +706,13 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					this.display();
 				}));
+	}
 
-		// ========== UI 配置 ==========
-		containerEl.createEl('h2', { text: 'UI 配置' });
+	private displayAppearanceSettings(containerEl: HTMLElement): void {
+		containerEl.createEl('h2', { text: '外观与高级配置' });
+		containerEl.createEl('p', { text: '自定义 AI 响应的视觉样式及调试选项。', cls: 'setting-item-description' });
 
-		// 默认折叠状态
-		new Setting(containerEl)
-			.setName('默认折叠响应')
-			.setDesc('AI 响应块默认是否折叠')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.defaultCollapsed)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultCollapsed = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// 显示加载消息
-		new Setting(containerEl)
-			.setName('显示加载消息')
-			.setDesc('在等待 AI 响应时显示加载指示器')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showLoadingMessages)
-				.onChange(async (value) => {
-					this.plugin.settings.showLoadingMessages = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// 添加分隔线
-		new Setting(containerEl)
-			.setName('添加分隔线')
-			.setDesc('在每次 AI 交互后添加分隔线（---）以区分不同的对话')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.addSeparatorAfterResponse)
-				.onChange(async (value) => {
-					this.plugin.settings.addSeparatorAfterResponse = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// 流式输出
-		new Setting(containerEl)
-			.setName('流式输出')
-			.setDesc('实时显示 AI 响应内容（逐字输出），关闭后等待完整响应后一次性显示')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.streamResponse)
-				.onChange(async (value) => {
-					this.plugin.settings.streamResponse = value;
-					await this.plugin.saveSettings();
-				}));
+		containerEl.createEl('h3', { text: '颜色设置' });
 
 		// AI 输出中颜色
 		new Setting(containerEl)
@@ -609,23 +770,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		// ========== 高级配置 ==========
-		containerEl.createEl('h2', { text: '高级配置' });
-
-		// 最大并发请求数
-		new Setting(containerEl)
-			.setName('最大并发请求数')
-			.setDesc('同时进行的最大 AI 请求数量')
-			.addText(text => text
-				.setPlaceholder('3')
-				.setValue(String(this.plugin.settings.maxConcurrentRequests))
-				.onChange(async (value) => {
-					const concurrent = parseInt(value);
-					if (!isNaN(concurrent) && concurrent > 0) {
-						this.plugin.settings.maxConcurrentRequests = concurrent;
-						await this.plugin.saveSettings();
-					}
-				}));
+		containerEl.createEl('h3', { text: '调试选项' });
 
 		// 调试模式
 		new Setting(containerEl)
@@ -648,8 +793,9 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					this.plugin.settings.logAIInteractions = value;
 					await this.plugin.saveSettings();
 				}));
+	}
 
-		// ========== Canvas 配置 ==========
+	private displayCanvasSettings(containerEl: HTMLElement): void {
 		containerEl.createEl('h2', { text: 'Canvas 配置' });
 		
 		// 启用 Canvas 功能
@@ -677,9 +823,9 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					}));
 
 			// Canvas 快捷键配置
-			containerEl.createEl('h3', { text: 'Canvas 快捷键' });
+			containerEl.createEl('h3', { text: 'Canvas AI 快捷键' });
 			containerEl.createEl('p', { 
-				text: '配置 Canvas 中的上下文快捷键。',
+				text: '配置在 Canvas 白板界面下的 AI 交互方式。使用方法：选中节点后，直接按下对应快捷键触发 AI。',
 				cls: 'setting-item-description'
 			});
 
@@ -897,25 +1043,25 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	 * 获取快捷键描述
 	 */
 	private getShortcutDescription(shortcut: any): string {
-		const keys = [...shortcut.modifiers, shortcut.key].join('+');
 		// 根据 contextType 返回描述
-		if (shortcut.contextType === 'current-node') return `${keys} -> 仅发送当前节点内容`;
-		if (shortcut.contextType === 'connected-nodes') return `${keys} -> 发送包含相连节点上下文的内容`;
+		if (shortcut.contextType === 'current-node') return `仅发送当前节点内容`;
+		if (shortcut.contextType === 'connected-nodes') return `发送包含相连节点上下文的内容`;
 		
 		// 兼容普通 shortcuts
-		if (shortcut.contextType === 'none') return `${keys} -> 仅发送 prompt`;
-		if (shortcut.contextType === 'before-cursor') return `${keys} -> 包含光标前内容`;
-		if (shortcut.contextType === 'settings') return `${keys} -> 遵循插件设置`;
+		if (shortcut.contextType === 'none') return `仅发送 prompt`;
+		if (shortcut.contextType === 'before-cursor') return `包含光标前内容`;
+		if (shortcut.contextType === 'settings') return `遵循插件设置`;
 		
-		return `${keys} -> ${shortcut.displayName}`;
+		return `${shortcut.displayName}`;
 	}
 
 	/**
 	 * 格式化快捷键显示
 	 */
 	private formatShortcut(shortcut: any): string {
+		const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 		const mods = shortcut.modifiers.map((m: string) => {
-			if (m === 'Mod') return 'Cmd/Ctrl';
+			if (m === 'Mod') return isMac ? 'Cmd' : 'Ctrl';
 			return m;
 		});
 		return [...mods, shortcut.key].join(' + ');

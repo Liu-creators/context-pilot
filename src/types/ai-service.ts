@@ -9,6 +9,9 @@
  * 包含连接 AI API 所需的所有配置信息
  */
 export interface AIServiceConfig {
+	/** AI 服务提供商 */
+	provider?: string;
+
 	/** API 端点 URL */
 	apiEndpoint: string;
 	
