@@ -141,7 +141,7 @@ export class CanvasUIController {
 			
 			if (isMultiSelection) {
 				// 多选模式：提取所有选中节点作为上下文
-				const selectedNodes = Array.from(selection) as CanvasNode[];
+				const selectedNodes = Array.from(selection);
 				// 按照位置排序（从上到下，从左到右）
 				selectedNodes.sort((a, b) => {
 					if (Math.abs(a.y - b.y) > 10) return a.y - b.y;
@@ -248,7 +248,7 @@ export class CanvasUIController {
 				} else {
 					// 单选模式
 					// 确保 responseNode 是 CanvasTextNode 类型
-					if ((responseNode as any).text !== undefined || responseNode.type === 'text') {
+					if ((responseNode as unknown).text !== undefined || responseNode.type === 'text') {
 						this.updateResponseNode(canvas, responseNode as CanvasTextNode, accumulatedContent);
 					}
 				}
@@ -480,7 +480,7 @@ export class CanvasUIController {
 	): void {
 		try {
 			// 获取插件设置
-			const settings = (this.plugin as any).settings as AIPluginSettings;
+			const settings = (this.plugin as unknown).settings as AIPluginSettings;
 			const canvasSettings = settings.canvasSettings;
 
 			// 计算错误节点位置（与响应节点相同的位置逻辑）

@@ -30,7 +30,7 @@ import type {
  * ```
  */
 export function isTextNode(node: CanvasNode): node is CanvasTextNode {
-	return node.type === 'text' || (!node.type && typeof (node as any).text === 'string');
+	return node.type === 'text' || (!node.type && typeof (node as unknown).text === 'string');
 }
 
 /**
@@ -50,7 +50,7 @@ export function isFileNode(node: CanvasNode): node is CanvasFileNode {
 	if (node.type === 'file') return true;
 	if (node.type) return false;
 	
-	const nodeAny = node as any;
+	const nodeAny = node as unknown;
 	// check if file property exists and is string or TFile (object with path)
 	if (typeof nodeAny.file === 'string') return true;
 	if (nodeAny.file && typeof nodeAny.file === 'object' && typeof nodeAny.file.path === 'string') return true;
@@ -72,7 +72,7 @@ export function isFileNode(node: CanvasNode): node is CanvasFileNode {
  * ```
  */
 export function isLinkNode(node: CanvasNode): node is CanvasLinkNode {
-	return node.type === 'link' || (!node.type && typeof (node as any).url === 'string');
+	return node.type === 'link' || (!node.type && typeof (node as unknown).url === 'string');
 }
 
 /**
@@ -93,7 +93,7 @@ export function isGroupNode(node: CanvasNode): node is CanvasGroupNode {
 	if (node.type) return false;
 	
 	// 如果没有 type 属性，且不包含 text/file/url 属性，则认为是分组节点
-	const nodeAny = node as any;
+	const nodeAny = node as unknown;
 	return typeof nodeAny.text === 'undefined' && 
 		   typeof nodeAny.file === 'undefined' && 
 		   typeof nodeAny.url === 'undefined';

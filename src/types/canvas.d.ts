@@ -398,8 +398,8 @@ export interface CanvasNodePosition {
  * Canvas 完整数据模型
  */
 export interface CanvasData {
-	nodes: any[];
-	edges: any[];
+	nodes: unknown[];
+	edges: unknown[];
 }
 
 /**

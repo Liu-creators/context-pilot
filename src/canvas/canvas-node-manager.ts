@@ -116,7 +116,7 @@ export class CanvasNodeManager {
 		});
 		
 		// 完整性检查：确保节点实例包含 getData 方法
-		if (node && typeof (node as any).getData !== 'function') {
+		if (node && typeof (node as unknown).getData !== 'function') {
 			console.error('[Canvas AI] 创建的节点实例不完整（缺少 getData），可能导致保存失败', node);
 			// 尝试补救：如果是纯数据对象，可能需要手动混入方法（但通常不应该发生）
 		}
@@ -154,8 +154,8 @@ export class CanvasNodeManager {
 	 * ```
 	 */
 	updateNodeContent(canvas: Canvas, node: CanvasTextNode, content: string): void {
-		const nodeAny = node as any;
-		const canvasAny = canvas as any;
+		const nodeAny = node as unknown;
+		const canvasAny = canvas as unknown;
 		
 		// 优先使用节点的 setText() 方法（Obsidian 内部节点对象通常有此方法）
 		// setText 会同时更新内部数据和 DOM 渲染
@@ -232,7 +232,7 @@ export class CanvasNodeManager {
 
 			// 设置标签
 			if (label) {
-				const edgeAny = edge as any;
+				const edgeAny = edge as unknown;
 				if (typeof edgeAny.setText === 'function') {
 					edgeAny.setText(label);
 				} else {

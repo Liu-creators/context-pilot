@@ -349,7 +349,7 @@ export class AIClient {
 	 * @param data API 响应数据
 	 * @returns 提取的内容文本
 	 */
-	private extractContent(data: any): string {
+	private extractContent(data: unknown): string {
 		// 支持 OpenAI 格式
 		if (data.choices && data.choices.length > 0) {
 			return data.choices[0].message?.content || data.choices[0].text || '';

@@ -39,10 +39,10 @@ export class CanvasMenuHandler {
 	 */
 	register(): void {
 		try {
-			const workspace = this.plugin.app.workspace as any;
+			const workspace = this.plugin.app.workspace as unknown;
 			
 			// 监听活动叶子变化,当切换到 Canvas 视图时设置观察器
-			const activeLeafRef = workspace.on('active-leaf-change', (leaf: any) => {
+			const activeLeafRef = workspace.on('active-leaf-change', (leaf: unknown) => {
 				if (leaf?.view?.getViewType() === 'canvas') {
 					setTimeout(() => {
 						this.setupCanvasObserver(leaf);
@@ -94,9 +94,9 @@ export class CanvasMenuHandler {
 	 * 
 	 * 监听工具栏的出现,自动添加 AI 按钮
 	 */
-	private setupCanvasObserver(leaf: any): void {
+	private setupCanvasObserver(leaf: unknown): void {
 		try {
-			const canvasView = leaf.view as any;
+			const canvasView = leaf.view;
 			if (!canvasView || !canvasView.canvas) {
 				return;
 			}
@@ -152,11 +152,11 @@ export class CanvasMenuHandler {
 	 */
 	private addToolbarButtonsToAllNodes(): void {
 		try {
-			const workspace = this.plugin.app.workspace as any;
+			const workspace = this.plugin.app.workspace as unknown;
 			const canvasLeaves = workspace.getLeavesOfType('canvas');
 			
 			for (const leaf of canvasLeaves) {
-				const canvasView = leaf.view as any;
+				const canvasView = leaf.view;
 				if (canvasView && canvasView.canvas) {
 					const canvas = canvasView.canvas as Canvas;
 					this.addToolbarButton(canvas);
@@ -204,7 +204,7 @@ export class CanvasMenuHandler {
 				e.preventDefault();
 				
 				try {
-					const workspace = self.plugin.app.workspace as any;
+					const workspace = self.plugin.app.workspace as unknown;
 					const canvasLeaves = workspace.getLeavesOfType('canvas');
 					
 					if (canvasLeaves.length === 0) {
@@ -213,7 +213,7 @@ export class CanvasMenuHandler {
 					}
 					
 					const leaf = canvasLeaves[0];
-					const canvasView = leaf.view as any;
+					const canvasView = leaf.view;
 					const currentCanvas = canvasView.canvas;
 					
 					if (!currentCanvas) {

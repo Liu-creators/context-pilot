@@ -360,7 +360,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	}
 
 	private displayAIServiceSettings(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: 'AI 服务配置' });
+		new Setting(containerEl).setName("AI 服务配置").setHeading();
 		containerEl.createEl('p', { text: '配置 AI 模型提供商的连接信息。', cls: 'setting-item-description' });
 
 		// 1. AI 服务提供商选择
@@ -480,7 +480,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	}
 
 	private displayInteractionSettings(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: '交互与行为配置' });
+		new Setting(containerEl).setName("交互与行为配置").setHeading();
 		containerEl.createEl('p', { text: '自定义 AI 的响应方式和网络行为。', cls: 'setting-item-description' });
 
 		// 流式输出
@@ -527,7 +527,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: '网络参数' });
+		new Setting(containerEl).setName("网络参数").setHeading();
 
 		// 请求超时
 		new Setting(containerEl)
@@ -576,7 +576,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	}
 
 	private displayContextSettings(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: '上下文与快捷键配置' });
+		new Setting(containerEl).setName("上下文与快捷键配置").setHeading();
 		containerEl.createEl('p', { text: '定义 AI 可以读取的上下文范围以及触发方式。', cls: 'setting-item-description' });
 
 		// 启用上下文
@@ -626,7 +626,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 		}
 
 		// 上下文快捷键配置
-		containerEl.createEl('h3', { text: '编辑器快捷键' });
+		new Setting(containerEl).setName("编辑器快捷键").setHeading();
 		containerEl.createEl('p', { 
 			text: '配置在文档编辑模式下的 AI 交互方式。使用方法：在编辑器中输入 / 后，按下对应快捷键提交问题。',
 			cls: 'setting-item-description'
@@ -669,7 +669,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					const shortcuts = this.plugin.settings.contextShortcuts;
 					if (shortcuts[index]) {
-						shortcuts[index].contextType = value as any;
+						shortcuts[index].contextType = value as unknown;
 						await this.plugin.saveSettings();
 						this.display();
 					}
@@ -709,10 +709,10 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	}
 
 	private displayAppearanceSettings(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: '外观与高级配置' });
+		new Setting(containerEl).setName("外观与高级配置").setHeading();
 		containerEl.createEl('p', { text: '自定义 AI 响应的视觉样式及调试选项。', cls: 'setting-item-description' });
 
-		containerEl.createEl('h3', { text: '颜色设置' });
+		new Setting(containerEl).setName("颜色设置").setHeading();
 
 		// AI 输出中颜色
 		new Setting(containerEl)
@@ -770,7 +770,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		containerEl.createEl('h3', { text: '调试选项' });
+		new Setting(containerEl).setName("调试选项").setHeading();
 
 		// 调试模式
 		new Setting(containerEl)
@@ -796,7 +796,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	}
 
 	private displayCanvasSettings(containerEl: HTMLElement): void {
-		containerEl.createEl('h2', { text: 'Canvas 配置' });
+		new Setting(containerEl).setName("Canvas 配置").setHeading();
 		
 		// 启用 Canvas 功能
 		new Setting(containerEl)
@@ -823,7 +823,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					}));
 
 			// Canvas 快捷键配置
-			containerEl.createEl('h3', { text: 'Canvas AI 快捷键' });
+			new Setting(containerEl).setName("Canvas AI 快捷键").setHeading();
 			containerEl.createEl('p', { 
 				text: '配置在 Canvas 白板界面下的 AI 交互方式。使用方法：选中节点后，直接按下对应快捷键触发 AI。',
 				cls: 'setting-item-description'
@@ -869,7 +869,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						const shortcuts = this.plugin.settings.canvasSettings.shortcuts;
 						if (shortcuts[index]) {
-							shortcuts[index].contextType = value as any;
+							shortcuts[index].contextType = value as unknown;
 							// 更新显示名称
 							shortcuts[index].displayName = value === 'current-node' ? '仅当前节点' : '包含相连节点';
 							await this.plugin.saveSettings();
@@ -1042,7 +1042,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	/**
 	 * 获取快捷键描述
 	 */
-	private getShortcutDescription(shortcut: any): string {
+	private getShortcutDescription(shortcut: unknown): string {
 		// 根据 contextType 返回描述
 		if (shortcut.contextType === 'current-node') return `仅发送当前节点内容`;
 		if (shortcut.contextType === 'connected-nodes') return `发送包含相连节点上下文的内容`;
@@ -1058,7 +1058,7 @@ export class AIPluginSettingTab extends PluginSettingTab {
 	/**
 	 * 格式化快捷键显示
 	 */
-	private formatShortcut(shortcut: any): string {
+	private formatShortcut(shortcut: unknown): string {
 		const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 		const mods = shortcut.modifiers.map((m: string) => {
 			if (m === 'Mod') return isMac ? 'Cmd' : 'Ctrl';

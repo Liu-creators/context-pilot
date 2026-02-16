@@ -62,7 +62,7 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 		super.open();
 		
 		// 获取建议框的 scope
-		const scope = (this as any).scope as Scope;
+		const scope = (this as unknown).scope as Scope;
 		if (scope) {
 			// 为每个配置的快捷键注册处理器
 			for (const shortcut of this.plugin.settings.contextShortcuts) {
@@ -72,7 +72,7 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 				}
 				
 				// 注册快捷键
-				scope.register(shortcut.modifiers as any, shortcut.key, (evt: KeyboardEvent) => {
+				scope.register(shortcut.modifiers as unknown, shortcut.key, (evt: KeyboardEvent) => {
 					evt.preventDefault();
 					evt.stopPropagation();
 					
@@ -291,7 +291,7 @@ export class AIEditorSuggest extends EditorSuggest<AISuggestion> {
 	 * @param shortcut 快捷键配置
 	 * @returns 格式化的快捷键字符串
 	 */
-	private formatShortcut(shortcut: any): string {
+	private formatShortcut(shortcut: unknown): string {
 		const parts = shortcut.modifiers.map((mod: string) => {
 			// 在 Mac 上将 Mod 显示为 Cmd，其他平台显示为 Ctrl
 			if (mod === 'Mod') {
